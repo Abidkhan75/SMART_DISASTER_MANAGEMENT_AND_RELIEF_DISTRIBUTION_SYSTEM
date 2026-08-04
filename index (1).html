@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Disaster Relief Command · Static Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="tag">CSE311L · Team 03 · Python/Flask</div>
+      <h1>Disaster Relief<br>Command</h1>
+      <div class="sub">DisasterManagementDB — Dhaka Ops</div>
+    </div>
+    <nav>
+      <div class="nav-group-label">Dashboard</div>
+      <a class="nav-btn active" href="index.html">Overview</a>
+      <a class="nav-btn" href="analytics.html">Analytics</a>
+
+      <div class="nav-group-label">Operations</div>
+      <a class="nav-btn" href="#"><span>Zones</span><span class="count">6</span></a>
+      <a class="nav-btn" href="#"><span>Disasters</span><span class="count">4</span></a>
+      <a class="nav-btn" href="#"><span>Shelters</span><span class="count">9</span></a>
+      <a class="nav-btn" href="#"><span>Victims</span><span class="count">128</span></a>
+      <a class="nav-btn" href="#"><span>Volunteers</span><span class="count">42</span></a>
+      <a class="nav-btn" href="#"><span>Relief Distributions</span><span class="count">57</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <b>Static preview</b><br>
+      Sample data only — no live database.
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="demo-banner">
+      ⚠ This is a <b>static GitHub Pages preview</b> with sample data. The real app runs on Flask + MySQL with working login, add/edit/delete, and live charts — see the
+      <a href="https://github.com/Abidkhan75/SMART_DISASTER_MANAGEMENT_AND_RELIEF_DISTRIBUTION_SYSTEM" target="_blank">GitHub repo</a> and run it locally with <code>python app.py</code>.
+    </div>
+
+    <div class="topbar">
+      <div style="display:flex;align-items:center;">
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <div>
+          <h2>Overview</h2>
+          <div class="meta">Live snapshot of all zones, shelters and relief activity</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div class="clock" id="clock">--:--:--<span class="date" id="clockDate">Dhaka</span></div>
+      </div>
+    </div>
+
+    <section class="view active">
+      <div class="alert ok" style="margin:16px 28px 0; border-radius:6px; border:1px solid var(--line);">Static demo loaded with sample data.</div>
+
+      <div class="view" style="padding-top:0;">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="label">Zones Monitored</div><div class="value">6</div><div class="hint">2 at high risk</div></div>
+          <div class="stat-card c-red"><div class="label">Ongoing Disasters</div><div class="value">3</div><div class="hint">of 4 logged total</div></div>
+          <div class="stat-card c-blue"><div class="label">Registered Victims</div><div class="value">128</div><div class="hint">across 9 shelters</div></div>
+          <div class="stat-card c-red"><div class="label">Shelters at Capacity</div><div class="value">2</div><div class="hint">of 9 shelters</div></div>
+          <div class="stat-card c-green"><div class="label">Volunteers Available</div><div class="value">27</div><div class="hint">of 42 total</div></div>
+        </div>
+
+        <div class="section-title">Zone Status Board</div>
+        <div class="zone-grid">
+          <div class="zone-card">
+            <div class="zrow"><span class="zname">Mirpur · Z001</span><span class="badge b-red">High</span></div>
+            <div class="zpop">Pop. 1,250,000 · 2 shelters</div>
+            <div class="occ-bar"><div class="occ-fill" style="width:92%; background:var(--red)"></div></div>
+            <div class="occ-label"><span>920 / 1,000 sheltered</span><span>92%</span></div>
+          </div>
+          <div class="zone-card">
+            <div class="zrow"><span class="zname">Savar · Z002</span><span class="badge b-amber">Medium</span></div>
+            <div class="zpop">Pop. 450,000 · 2 shelters</div>
+            <div class="occ-bar"><div class="occ-fill" style="width:64%; background:var(--amber)"></div></div>
+            <div class="occ-label"><span>512 / 800 sheltered</span><span>64%</span></div>
+          </div>
+          <div class="zone-card">
+            <div class="zrow"><span class="zname">Gazipur · Z003</span><span class="badge b-red">High</span></div>
+            <div class="zpop">Pop. 620,000 · 1 shelter</div>
+            <div class="occ-bar"><div class="occ-fill" style="width:98%; background:var(--red)"></div></div>
+            <div class="occ-label"><span>294 / 300 sheltered</span><span>98%</span></div>
+          </div>
+          <div class="zone-card">
+            <div class="zrow"><span class="zname">Tongi · Z004</span><span class="badge b-green">Low</span></div>
+            <div class="zpop">Pop. 210,000 · 1 shelter</div>
+            <div class="occ-bar"><div class="occ-fill" style="width:35%; background:var(--green)"></div></div>
+            <div class="occ-label"><span>105 / 300 sheltered</span><span>35%</span></div>
+          </div>
+          <div class="zone-card">
+            <div class="zrow"><span class="zname">Keraniganj · Z005</span><span class="badge b-amber">Medium</span></div>
+            <div class="zpop">Pop. 180,000 · 2 shelters</div>
+            <div class="occ-bar"><div class="occ-fill" style="width:70%; background:var(--amber)"></div></div>
+            <div class="occ-label"><span>350 / 500 sheltered</span><span>70%</span></div>
+          </div>
+          <div class="zone-card">
+            <div class="zrow"><span class="zname">Narayanganj · Z006</span><span class="badge b-green">Low</span></div>
+            <div class="zpop">Pop. 300,000 · 1 shelter</div>
+            <div class="occ-bar"><div class="occ-fill" style="width:22%; background:var(--green)"></div></div>
+            <div class="occ-label"><span>66 / 300 sheltered</span><span>22%</span></div>
+          </div>
+        </div>
+
+        <div class="section-title">Recent Relief Distributions</div>
+        <div class="panel">
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Dispatch</th><th>Victim</th><th>Zone</th><th>Volunteer</th><th>Resource</th><th>Qty</th><th>Date</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td><span class="mono">D057</span></td><td>Rahim Uddin</td><td>Z001</td><td>Farhana Akter</td><td>Rice (25kg)</td><td>3</td><td class="mono">2026-08-03</td><td><span class="badge b-amber">Pending</span></td></tr>
+                <tr><td><span class="mono">D056</span></td><td>Karim Sheikh</td><td>Z003</td><td>Tanvir Hasan</td><td>Drinking Water</td><td>10</td><td class="mono">2026-08-03</td><td><span class="badge b-green">Delivered</span></td></tr>
+                <tr><td><span class="mono">D055</span></td><td>Nasrin Begum</td><td>Z002</td><td>Sabbir Ahmed</td><td>Medical Kit</td><td>1</td><td class="mono">2026-08-02</td><td><span class="badge b-green">Delivered</span></td></tr>
+                <tr><td><span class="mono">D054</span></td><td>Jamal Hossain</td><td>Z001</td><td>Farhana Akter</td><td>Blankets</td><td>5</td><td class="mono">2026-08-02</td><td><span class="badge b-amber">Pending</span></td></tr>
+                <tr><td><span class="mono">D053</span></td><td>Ayesha Siddika</td><td>Z005</td><td>Rafiul Islam</td><td>Tarpaulin Sheet</td><td>2</td><td class="mono">2026-08-01</td><td><span class="badge b-green">Delivered</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="appfoot">DisasterManagementDB · Smart Disaster Relief Management System · North South University, Dept. of ECE · Python + Flask + SQLite/MySQL</footer>
+  </div>
+</div>
+<script>
+function tickClock(){
+  const now = new Date();
+  const time = now.toLocaleTimeString('en-GB');
+  const date = now.toLocaleDateString('en-GB', {weekday:'short', day:'2-digit', month:'short', year:'numeric'});
+  document.getElementById('clock').innerHTML = time + `<span class="date">${date} · Dhaka</span>`;
+}
+tickClock();
+setInterval(tickClock, 1000);
+document.getElementById('menuToggle').addEventListener('click', ()=>{
+  document.getElementById('sidebar').classList.toggle('open');
+});
+</script>
+</body>
+</html>
