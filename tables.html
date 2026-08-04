@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tables · Disaster Relief Command</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .empty-row td{text-align:center; color:var(--muted); padding:26px; font-size:12.5px;}
+  .fk-chip .fid{font-family:var(--mono); color:var(--muted); font-size:10px; display:block;}
+  .head-actions{display:flex; gap:8px; align-items:center;}
+  .static-note{font-size:11px; color:var(--muted); margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="tag">CSE311L · Team 03 · Python/Flask</div>
+      <h1>Disaster Relief<br>Command</h1>
+      <div class="sub">DisasterManagementDB — Dhaka Ops</div>
+    </div>
+    <nav id="navArea"></nav>
+    <div class="sidebar-footer">
+      <b>Static preview</b><br>
+      Sample data only — no live database.
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="demo-banner">
+      ⚠ This is a <b>static GitHub Pages preview</b> with sample data. Search works, but Add / Edit / Delete require the real app — see the
+      <a href="https://github.com/Abidkhan75/SMART_DISASTER_MANAGEMENT_AND_RELIEF_DISTRIBUTION_SYSTEM" target="_blank">GitHub repo</a> and run it locally with <code>python app.py</code>.
+    </div>
+
+    <div class="topbar">
+      <div style="display:flex;align-items:center;">
+        <button class="menu-toggle" id="menuToggle">☰</button>
+        <div>
+          <h2 id="pageTitle">Table</h2>
+          <div class="meta" id="pageDesc"></div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <div class="clock" id="clock">--:--:--<span class="date" id="clockDate">Dhaka</span></div>
+      </div>
+    </div>
+
+    <section class="view active">
+      <div class="view" style="padding-top:0;">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h3 id="panelLabel"></h3>
+              <div class="desc" id="panelDesc"></div>
+            </div>
+            <div class="head-actions">
+              <input class="search" type="text" id="searchBox" placeholder="Search...">
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead id="tableHead"></thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="static-note">This is read-only sample data mirroring <span class="mono">schema.sql</span>. Add / Edit / Delete run against a live database in the real Flask app.</div>
+      </div>
+    </section>
+
+    <footer class="appfoot">DisasterManagementDB · Smart Disaster Relief Management System · North South University, Dept. of ECE · Python + Flask + SQLite/MySQL</footer>
+  </div>
+</div>
+
+<script>
+// ---- Schema (mirrors schema.py) ----
+const SCHEMA = {
+  ZONE: { label: "Zones", desc: "Administrative zones being monitored", pk: "Zone_ID", display: "City",
+    columns: [
+      {key:"Zone_ID", label:"ID", pk:true},
+      {key:"City", label:"City"},
+      {key:"District", label:"District"},
+      {key:"Division", label:"Division"},
+      {key:"Population", label:"Population"},
+      {key:"Risk_Level", label:"Risk", status:true},
+    ]},
+  DISASTER: { label: "Disasters", desc: "Logged disaster events", pk: "Disaster_ID", display: "Disaster_Name",
+    columns: [
+      {key:"Disaster_ID", label:"ID", pk:true},
+      {key:"Disaster_Name", label:"Name"},
+      {key:"Severity_Level", label:"Severity"},
+      {key:"Start_Time", label:"Start"},
+      {key:"End_Time", label:"End"},
+      {key:"Status", label:"Status", status:true},
+    ]},
+  SHELTER: { label: "Shelters", desc: "Shelter capacity and status", pk: "Shelter_ID", display: "Address",
+    columns: [
+      {key:"Shelter_ID", label:"ID", pk:true},
+      {key:"Zone_ID", label:"Zone", fk:"ZONE"},
+      {key:"Capacity", label:"Capacity"},
+      {key:"Current_Occupancy", label:"Occupied"},
+      {key:"Address", label:"Address"},
+      {key:"Contact_No", label:"Contact"},
+      {key:"Status", label:"Status", status:true},
+    ]},
+  ORGANIZATION: { label: "Organizations", desc: "Partner NGOs and agencies", pk: "Organization_ID", display: "Organization_Name",
+    columns: [
+      {key:"Organization_ID", label:"ID", pk:true},
+      {key:"Organization_Name", label:"Name"},
+      {key:"Address", label:"Address"},
+      {key:"Contact_No", label:"Contact"},
+      {key:"Email", label:"Email"},
+    ]},
+  RESOURCE: { label: "Resources", desc: "Relief resource catalog", pk: "Resource_ID", display: "Resource_Name",
+    columns: [
+      {key:"Resource_ID", label:"ID", pk:true},
+      {key:"Resource_Name", label:"Name"},
+      {key:"Category", label:"Category"},
+      {key:"Unit", label:"Unit"},
+      {key:"Unit_Cost", label:"Unit Cost", money:true},
+    ]},
+  VICTIM: { label: "Victims", desc: "Registered affected individuals", pk: "Victim_ID", display: "Full_Name",
+    columns: [
+      {key:"Victim_ID", label:"ID", pk:true},
+      {key:"NID", label:"NID"},
+      {key:"Shelter_ID", label:"Shelter", fk:"SHELTER"},
+      {key:"Zone_ID", label:"Zone", fk:"ZONE"},
+      {key:"Full_Name", label:"Name"},
+      {key:"Age", label:"Age"},
+      {key:"Gender", label:"Gender"},
+      {key:"Family_Size", label:"Family"},
+      {key:"Medical_Status", label:"Medical", status:true},
+      {key:"Contact_No", label:"Contact"},
+    ]},
+  DISASTER_ZONE: { label: "Disaster ⇄ Zone", desc: "Impact of each disaster per zone", pk: "DisasterZone_ID", display: null,
+    columns: [
+      {key:"DisasterZone_ID", label:"ID", pk:true},
+      {key:"Disaster_ID", label:"Disaster", fk:"DISASTER"},
+      {key:"Zone_ID", label:"Zone", fk:"ZONE"},
+      {key:"Affected_Population", label:"Affected Pop."},
+      {key:"Estimated_Budget", label:"Budget", money:true},
+      {key:"Relief_Status", label:"Relief", status:true},
+      {key:"Damage_Level", label:"Damage", status:true},
+    ]},
+  VOLUNTEER: { label: "Volunteers", desc: "Field volunteers by zone", pk: "Volunteer_ID", display: "Full_Name",
+    columns: [
+      {key:"Volunteer_ID", label:"ID", pk:true},
+      {key:"Organization_ID", label:"Org", fk:"ORGANIZATION"},
+      {key:"Zone_ID", label:"Zone", fk:"ZONE"},
+      {key:"Full_Name", label:"Name"},
+      {key:"Phone", label:"Phone"},
+      {key:"Gender", label:"Gender"},
+      {key:"Skill", label:"Skill"},
+      {key:"Availability", label:"Status", status:true},
+    ]},
+  INVENTORY: { label: "Inventory", desc: "Resource stock by shelter/zone", pk: "Inventory_ID", display: null,
+    columns: [
+      {key:"Inventory_ID", label:"ID", pk:true},
+      {key:"Shelter_ID", label:"Shelter", fk:"SHELTER"},
+      {key:"Resource_ID", label:"Resource", fk:"RESOURCE"},
+      {key:"Organization_ID", label:"Org", fk:"ORGANIZATION"},
+      {key:"Zone_ID", label:"Zone", fk:"ZONE"},
+      {key:"Quantity", label:"Qty"},
+      {key:"Last_Updated", label:"Updated"},
+    ]},
+  RELIEF_DISTRIBUTION: { label: "Relief Distribution", desc: "Dispatch log to victims", pk: "Dis_ID", display: null,
+    columns: [
+      {key:"Dis_ID", label:"ID", pk:true},
+      {key:"Victim_ID", label:"Victim", fk:"VICTIM"},
+      {key:"Zone_ID", label:"Zone", fk:"ZONE"},
+      {key:"Volunteer_ID", label:"Volunteer", fk:"VOLUNTEER"},
+      {key:"Organization_ID", label:"Org", fk:"ORGANIZATION"},
+      {key:"Resource_ID", label:"Resource", fk:"RESOURCE"},
+      {key:"Quantity", label:"Qty"},
+      {key:"Dis_Date", label:"Date"},
+      {key:"Dis_Status", label:"Status", status:true},
+    ]},
+};
+
+const NAV_GROUPS = {
+  "Ground Data": ["ZONE","DISASTER","SHELTER","VICTIM","DISASTER_ZONE"],
+  "Response Network": ["VOLUNTEER","ORGANIZATION","RESOURCE","INVENTORY","RELIEF_DISTRIBUTION"],
+};
+
+// ---- Data (mirrors schema.sql seed rows) ----
+const DATA = {
+  ZONE: [
+    {Zone_ID:"Z001",City:"Dhaka",District:"Dhaka",Division:"Dhaka",Population:1500000,Risk_Level:"High"},
+    {Zone_ID:"Z002",City:"Dhaka",District:"Dhaka",Division:"Dhaka",Population:1200000,Risk_Level:"Medium"},
+    {Zone_ID:"Z003",City:"Dhaka",District:"Dhaka",Division:"Dhaka",Population:950000,Risk_Level:"High"},
+    {Zone_ID:"Z004",City:"Dhaka",District:"Dhaka",Division:"Dhaka",Population:1100000,Risk_Level:"Medium"},
+    {Zone_ID:"Z005",City:"Dhaka",District:"Dhaka",Division:"Dhaka",Population:850000,Risk_Level:"Low"},
+  ],
+  DISASTER: [
+    {Disaster_ID:"D001",Disaster_Name:"Urban Flood",Severity_Level:"High",Start_Time:"2026-07-10",End_Time:"2026-07-15",Status:"Completed"},
+    {Disaster_ID:"D002",Disaster_Name:"Fire Accident",Severity_Level:"Medium",Start_Time:"2026-05-20",End_Time:"2026-05-20",Status:"Completed"},
+    {Disaster_ID:"D003",Disaster_Name:"Building Collapse",Severity_Level:"High",Start_Time:"2026-06-01",End_Time:"2026-06-03",Status:"Completed"},
+    {Disaster_ID:"D004",Disaster_Name:"Waterlogging",Severity_Level:"Medium",Start_Time:"2026-07-18",End_Time:"2026-07-20",Status:"Ongoing"},
+    {Disaster_ID:"D005",Disaster_Name:"Gas Explosion",Severity_Level:"High",Start_Time:"2026-04-12",End_Time:"2026-04-12",Status:"Completed"},
+  ],
+  SHELTER: [
+    {Shelter_ID:"S001",Zone_ID:"Z001",Capacity:500,Current_Occupancy:320,Address:"Mirpur Govt School",Contact_No:"01711111111",Status:"Active"},
+    {Shelter_ID:"S002",Zone_ID:"Z002",Capacity:700,Current_Occupancy:500,Address:"Mohammadpur College",Contact_No:"01722222222",Status:"Active"},
+    {Shelter_ID:"S003",Zone_ID:"Z003",Capacity:450,Current_Occupancy:220,Address:"Dhanmondi Community Center",Contact_No:"01733333333",Status:"Active"},
+    {Shelter_ID:"S004",Zone_ID:"Z004",Capacity:650,Current_Occupancy:610,Address:"Uttara High School",Contact_No:"01744444444",Status:"Full"},
+    {Shelter_ID:"S005",Zone_ID:"Z005",Capacity:400,Current_Occupancy:150,Address:"Badda Govt School",Contact_No:"01755555555",Status:"Active"},
+  ],
+  ORGANIZATION: [
+    {Organization_ID:"O001",Organization_Name:"Bangladesh Red Crescent Society",Address:"Dhaka",Contact_No:"01811111111",Email:"info@bdrcs.org"},
+    {Organization_ID:"O002",Organization_Name:"BRAC",Address:"Mohakhali",Contact_No:"01822222222",Email:"help@brac.net"},
+    {Organization_ID:"O003",Organization_Name:"Dhaka North City Corporation",Address:"Gulshan",Contact_No:"01833333333",Email:"support@dncc.gov.bd"},
+    {Organization_ID:"O004",Organization_Name:"Bangladesh Army",Address:"Cantonment",Contact_No:"01844444444",Email:"army@mil.bd"},
+    {Organization_ID:"O005",Organization_Name:"Fire Service & Civil Defence",Address:"Siddiqbazar",Contact_No:"01855555555",Email:"rescue@fireservice.gov.bd"},
+  ],
+  RESOURCE: [
+    {Resource_ID:"R001",Resource_Name:"Rice",Category:"Food",Unit:"Kg",Unit_Cost:75},
+    {Resource_ID:"R002",Resource_Name:"Drinking Water",Category:"Water",Unit:"Bottle",Unit_Cost:30},
+    {Resource_ID:"R003",Resource_Name:"Blanket",Category:"Clothing",Unit:"Piece",Unit_Cost:650},
+    {Resource_ID:"R004",Resource_Name:"Medicine Kit",Category:"Medical",Unit:"Box",Unit_Cost:1200},
+    {Resource_ID:"R005",Resource_Name:"Baby Food",Category:"Food",Unit:"Packet",Unit_Cost:450},
+  ],
+  VICTIM: [
+    {Victim_ID:"V001",NID:"1990123456789",Shelter_ID:"S001",Zone_ID:"Z001",Full_Name:"Md. Rahim Uddin",Age:35,Gender:"Male",Family_Size:5,Medical_Status:"Stable",Contact_No:"01911111111"},
+    {Victim_ID:"V002",NID:"1991456789123",Shelter_ID:"S002",Zone_ID:"Z002",Full_Name:"Nusrat Jahan",Age:29,Gender:"Female",Family_Size:4,Medical_Status:"Injured",Contact_No:"01922222222"},
+    {Victim_ID:"V003",NID:"1989456123789",Shelter_ID:"S003",Zone_ID:"Z003",Full_Name:"Mohammad Karim",Age:47,Gender:"Male",Family_Size:6,Medical_Status:"Stable",Contact_No:"01933333333"},
+    {Victim_ID:"V004",NID:"2001123456780",Shelter_ID:"S004",Zone_ID:"Z004",Full_Name:"Sadia Akter",Age:24,Gender:"Female",Family_Size:3,Medical_Status:"Critical",Contact_No:"01944444444"},
+    {Victim_ID:"V005",NID:"1993567891234",Shelter_ID:"S005",Zone_ID:"Z005",Full_Name:"Rakib Hasan",Age:31,Gender:"Male",Family_Size:5,Medical_Status:"Stable",Contact_No:"01955555555"},
+  ],
+  DISASTER_ZONE: [
+    {DisasterZone_ID:"DZ001",Disaster_ID:"D001",Zone_ID:"Z001",Affected_Population:20000,Estimated_Budget:5000000,Relief_Status:"Ongoing",Damage_Level:"Severe"},
+    {DisasterZone_ID:"DZ002",Disaster_ID:"D002",Zone_ID:"Z002",Affected_Population:8000,Estimated_Budget:1800000,Relief_Status:"Completed",Damage_Level:"Medium"},
+    {DisasterZone_ID:"DZ003",Disaster_ID:"D003",Zone_ID:"Z003",Affected_Population:12000,Estimated_Budget:7000000,Relief_Status:"Ongoing",Damage_Level:"Severe"},
+    {DisasterZone_ID:"DZ004",Disaster_ID:"D004",Zone_ID:"Z004",Affected_Population:15000,Estimated_Budget:3500000,Relief_Status:"Ongoing",Damage_Level:"Medium"},
+    {DisasterZone_ID:"DZ005",Disaster_ID:"D005",Zone_ID:"Z005",Affected_Population:6000,Estimated_Budget:2500000,Relief_Status:"Completed",Damage_Level:"High"},
+  ],
+  VOLUNTEER: [
+    {Volunteer_ID:"VL001",Organization_ID:"O001",Zone_ID:"Z001",Full_Name:"Tanvir Ahmed",Phone:"01611111111",Gender:"Male",Skill:"First Aid",Availability:"Available"},
+    {Volunteer_ID:"VL002",Organization_ID:"O002",Zone_ID:"Z002",Full_Name:"Jannatul Ferdous",Phone:"01622222222",Gender:"Female",Skill:"Food Distribution",Availability:"Available"},
+    {Volunteer_ID:"VL003",Organization_ID:"O003",Zone_ID:"Z003",Full_Name:"Ashraful Islam",Phone:"01633333333",Gender:"Male",Skill:"Rescue",Availability:"Busy"},
+    {Volunteer_ID:"VL004",Organization_ID:"O004",Zone_ID:"Z004",Full_Name:"Farhana Yasmin",Phone:"01644444444",Gender:"Female",Skill:"Medical Support",Availability:"Available"},
+    {Volunteer_ID:"VL005",Organization_ID:"O005",Zone_ID:"Z005",Full_Name:"Imran Hossain",Phone:"01655555555",Gender:"Male",Skill:"Fire Rescue",Availability:"Available"},
+  ],
+  INVENTORY: [
+    {Inventory_ID:"I001",Shelter_ID:"S001",Resource_ID:"R001",Organization_ID:"O001",Zone_ID:"Z001",Quantity:500,Last_Updated:"2026-07-12"},
+    {Inventory_ID:"I002",Shelter_ID:"S002",Resource_ID:"R002",Organization_ID:"O002",Zone_ID:"Z002",Quantity:1000,Last_Updated:"2026-07-12"},
+    {Inventory_ID:"I003",Shelter_ID:"S003",Resource_ID:"R003",Organization_ID:"O003",Zone_ID:"Z003",Quantity:300,Last_Updated:"2026-07-13"},
+    {Inventory_ID:"I004",Shelter_ID:"S004",Resource_ID:"R004",Organization_ID:"O004",Zone_ID:"Z004",Quantity:200,Last_Updated:"2026-07-14"},
+    {Inventory_ID:"I005",Shelter_ID:"S005",Resource_ID:"R005",Organization_ID:"O005",Zone_ID:"Z005",Quantity:400,Last_Updated:"2026-07-15"},
+  ],
+  RELIEF_DISTRIBUTION: [
+    {Dis_ID:"RD001",Victim_ID:"V001",Zone_ID:"Z001",Volunteer_ID:"VL001",Organization_ID:"O001",Resource_ID:"R001",Quantity:20,Dis_Date:"2026-07-12",Dis_Status:"Delivered"},
+    {Dis_ID:"RD002",Victim_ID:"V002",Zone_ID:"Z002",Volunteer_ID:"VL002",Organization_ID:"O002",Resource_ID:"R002",Quantity:50,Dis_Date:"2026-07-12",Dis_Status:"Delivered"},
+    {Dis_ID:"RD003",Victim_ID:"V003",Zone_ID:"Z003",Volunteer_ID:"VL003",Organization_ID:"O003",Resource_ID:"R003",Quantity:10,Dis_Date:"2026-07-13",Dis_Status:"Pending"},
+    {Dis_ID:"RD004",Victim_ID:"V004",Zone_ID:"Z004",Volunteer_ID:"VL004",Organization_ID:"O004",Resource_ID:"R004",Quantity:5,Dis_Date:"2026-07-14",Dis_Status:"Delivered"},
+    {Dis_ID:"RD005",Victim_ID:"V005",Zone_ID:"Z005",Volunteer_ID:"VL005",Organization_ID:"O005",Resource_ID:"R005",Quantity:15,Dis_Date:"2026-07-15",Dis_Status:"Delivered"},
+  ],
+};
+
+function statusColor(val){
+  if(!val) return "b-muted";
+  const v = String(val).toLowerCase();
+  if(["high","critical","full","severe","busy"].includes(v)) return "b-red";
+  if(["medium","pending","ongoing","injured"].includes(v)) return "b-amber";
+  if(["low","active","available","stable","delivered","completed"].includes(v)) return "b-green";
+  return "b-muted";
+}
+
+function displayFor(table, id){
+  if(!id) return {main:"—", sub:""};
+  const cfg = SCHEMA[table];
+  const rec = (DATA[table]||[]).find(r => r[cfg.pk] === id);
+  if(!rec) return {main:id, sub:""};
+  const main = cfg.display ? rec[cfg.display] : id;
+  return {main: main || id, sub: id};
+}
+
+function buildNav(){
+  const nav = document.getElementById('navArea');
+  let html = `<div class="nav-group-label">Dashboard</div>
+    <a class="nav-btn" href="index.html">Overview</a>
+    <a class="nav-btn" href="analytics.html">Analytics</a>`;
+  for(const [group, tables] of Object.entries(NAV_GROUPS)){
+    html += `<div class="nav-group-label">${group}</div>`;
+    for(const t of tables){
+      const active = (currentTable === t) ? 'active' : '';
+      html += `<a class="nav-btn ${active}" href="tables.html#${t}"><span>${SCHEMA[t].label}</span><span class="count">${DATA[t].length}</span></a>`;
+    }
+  }
+  nav.innerHTML = html;
+}
+
+let currentTable = null;
+
+function render(){
+  currentTable = (location.hash || '#ZONE').slice(1);
+  if(!SCHEMA[currentTable]) currentTable = 'ZONE';
+  const cfg = SCHEMA[currentTable];
+  const rows = DATA[currentTable];
+
+  document.getElementById('pageTitle').textContent = cfg.label;
+  document.getElementById('pageDesc').textContent = cfg.desc;
+  document.getElementById('panelLabel').textContent = cfg.label;
+  document.getElementById('panelDesc').textContent = `${cfg.desc} · ${rows.length} records`;
+  document.title = cfg.label + " · Disaster Relief Command";
+
+  const thead = document.getElementById('tableHead');
+  thead.innerHTML = '<tr>' + cfg.columns.map(c => `<th>${c.label}</th>`).join('') + '</tr>';
+
+  buildNav();
+  document.getElementById('searchBox').value = '';
+  renderRows(rows);
+}
+
+function renderRows(rows){
+  const cfg = SCHEMA[currentTable];
+  const tbody = document.getElementById('tableBody');
+  if(rows.length === 0){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="${cfg.columns.length}">No matching records.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const cells = cfg.columns.map((c, i) => {
+      let content;
+      if(c.pk){
+        content = `<span class="mono">${r[c.key]}</span>`;
+      } else if(c.fk){
+        const d = displayFor(c.fk, r[c.key]);
+        content = `<span class="fk-chip">${d.main}<span class="fid">${d.sub}</span></span>`;
+      } else if(c.status){
+        content = `<span class="badge ${statusColor(r[c.key])}">${r[c.key]}</span>`;
+      } else if(c.money){
+        content = `৳${Number(r[c.key]).toLocaleString()}`;
+      } else if(typeof r[c.key] === 'number'){
+        content = r[c.key].toLocaleString();
+      } else {
+        content = r[c.key];
+      }
+      const style = i === 0 ? ` style="border-left-color:transparent"` : '';
+      return `<td${style}>${content}</td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+}
+
+function applySearch(){
+  const q = document.getElementById('searchBox').value.trim().toLowerCase();
+  const cfg = SCHEMA[currentTable];
+  const rows = DATA[currentTable];
+  if(!q){ renderRows(rows); return; }
+  const filtered = rows.filter(r => {
+    for(const c of cfg.columns){
+      let v = r[c.key];
+      if(c.fk){
+        const d = displayFor(c.fk, v);
+        v = `${d.main} ${v}`;
+      }
+      if(String(v).toLowerCase().includes(q)) return true;
+    }
+    return false;
+  });
+  renderRows(filtered);
+}
+
+document.getElementById('searchBox').addEventListener('input', applySearch);
+window.addEventListener('hashchange', render);
+document.getElementById('menuToggle').addEventListener('click', ()=>{
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+function tickClock(){
+  const now = new Date();
+  const time = now.toLocaleTimeString('en-GB');
+  const date = now.toLocaleDateString('en-GB', {weekday:'short', day:'2-digit', month:'short', year:'numeric'});
+  document.getElementById('clock').innerHTML = time + `<span class="date">${date} · Dhaka</span>`;
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+render();
+</script>
+</body>
+</html>
