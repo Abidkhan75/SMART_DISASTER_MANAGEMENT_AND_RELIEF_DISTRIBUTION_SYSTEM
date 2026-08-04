@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="view" style="padding-top:0; max-width:420px;">
+  <div class="panel" style="padding:24px;">
+    <h3 style="margin-top:0;">Sign In</h3>
+    <form method="post">
+      <div class="field" style="margin-bottom:14px;">
+        <label>Login as</label>
+        <select name="role" required>
+          <option value="admin">Admin</option>
+          <option value="victim">Victim</option>
+          <option value="volunteer">Volunteer</option>
+          <option value="organization">Organization</option>
+        </select>
+      </div>
+      <div class="field" style="margin-bottom:14px;">
+        <label>ID</label>
+        <input type="text" name="user_id" placeholder="e.g. V001, VL001, O001, A001" required>
+      </div>
+      <div class="field" style="margin-bottom:14px;">
+        <label>Password</label>
+        <input type="password" name="password" required>
+      </div>
+      <div class="form-actions">
+        <button class="btn" type="submit">Log In</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

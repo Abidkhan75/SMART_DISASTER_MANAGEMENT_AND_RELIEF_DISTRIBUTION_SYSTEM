@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="view" style="padding-top:0;">
+  <div class="stat-grid">
+    <div class="stat-card"><div class="label">Zones Monitored</div><div class="value">{{ zones|length }}</div><div class="hint">{{ high_risk_zones }} at high risk</div></div>
+    <div class="stat-card c-red"><div class="label">Ongoing Disasters</div><div class="value">{{ ongoing_disasters }}</div><div class="hint">of {{ disasters|length }} logged total</div></div>
+    <div class="stat-card c-blue"><div class="label">Registered Victims</div><div class="value">{{ victims|length }}</div><div class="hint">across {{ shelters|length }} shelters</div></div>
+    <div class="stat-card {{ 'c-red' if full_shelters else 'c-green' }}"><div class="label">Shelters at Capacity</div><div class="value">{{ full_shelters }}</div><div class="hint">of {{ shelters|length }} shelters</div></div>
+    <div class="stat-card c-green"><div class="label">Volunteers Available</div><div class="value">{{ avail_volunteers }}</div><div class="hint">of {{ volunteers|length }} total</div></div>
+  </div>
+
+  <div class="section-title">Zone Status Board</div>
+  <div class="zone-grid">
+    {% for z in zone_cards %}
+    <div class="zone-card">
+      <div class="zrow">
+        <span class="zname">{{ z.City }} · {{ z.Zone_ID }}</span>
+        <span class="badge {{ status_color(z.Risk_Level) }}">{{ z.Risk_Level }}</span>
+      </div>
+      <div class="zpop">Pop. {{ "{:,}".format(z.Population) }} · {{ z.shelter_count }} shelter{{ '' if z.shelter_count == 1 else 's' }}</div>
+      <div class="occ-bar"><div class="occ-fill" style="width:{{ z.pct }}%; background:{{ z.bar_color }}"></div></div>
+      <div class="occ-label"><span>{{ "{:,}".format(z.occ) }} / {{ "{:,}".format(z.cap) }} sheltered</span><span>{{ z.pct }}%</span></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="section-title">Recent Relief Distributions</div>
+  <div class="panel">
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Dispatch</th><th>Victim</th><th>Zone</th><th>Volunteer</th><th>Resource</th><th>Qty</th><th>Date</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for d in distributions %}
+          {% set victim = display_for('VICTIM', d.Victim_ID) %}
+          {% set vol = display_for('VOLUNTEER', d.Volunteer_ID) %}
+          {% set res = display_for('RESOURCE', d.Resource_ID) %}
+          <tr>
+            <td><span class="mono">{{ d.Dis_ID }}</span></td>
+            <td>{{ victim.main }}</td>
+            <td>{{ d.Zone_ID }}</td>
+            <td>{{ vol.main }}</td>
+            <td>{{ res.main }}</td>
+            <td>{{ d.Quantity }}</td>
+            <td class="mono">{{ d.Dis_Date }}</td>
+            <td><span class="badge {{ status_color(d.Dis_Status) }}">{{ d.Dis_Status }}</span></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section-title">Danger Zone</div>
+  <div class="panel" style="padding:16px;">
+   
+    <span class="form-note" style="margin-left:10px;">Wipes local changes and reloads <span class="mono">schema.sql</span>.</span>
+  </div>
+</div>
+{% endblock %}

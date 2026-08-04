@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="view" style="padding-top:0;">
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <h3>{{ cfg.label }}</h3>
+        <div class="desc">{{ cfg.desc }} · <span class="mono">{{ total_count }}</span> records</div>
+      </div>
+      <div class="head-actions">
+        <form method="get" style="display:flex; gap:8px;">
+          <input class="search" type="text" name="q" placeholder="Search {{ cfg.label.lower() }}..." value="{{ q }}">
+        </form>
+        <button class="btn" onclick="const f=document.getElementById('addForm'); f.style.display = f.style.display==='none' ? 'block' : 'none';">+ Add {{ cfg.label.rstrip('s') }}</button>
+      </div>
+    </div>
+
+    <div class="add-form" id="addForm" style="display:none;">
+      <form method="post" action="{{ url_for('add_record', table=table) }}">
+        <div class="grid">
+          {% for c in cfg.columns %}
+            {% if not c.get('pk') %}
+            <div class="field">
+              <label>{{ c.label }}</label>
+              {% if c.type == 'select' %}
+                <select name="{{ c.key }}">
+                  {% for o in c.options %}<option value="{{ o }}">{{ o }}</option>{% endfor %}
+                </select>
+              {% elif c.type == 'fk' %}
+                <select name="{{ c.key }}">
+                  {% set ref_cfg = SCHEMA[c.ref] %}
+                  {% for r in ref_rows(c.ref) %}
+                    {% set d = display_for(c.ref, r[ref_cfg.pk]) %}
+                    <option value="{{ r[ref_cfg.pk] }}">{{ r[ref_cfg.pk] }} — {{ d.main }}</option>
+                  {% endfor %}
+                </select>
+              {% else %}
+                <input type="{{ 'number' if c.type == 'number' else ('date' if c.type == 'date' else 'text') }}" name="{{ c.key }}">
+              {% endif %}
+            </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+        <div class="form-actions">
+          <button class="btn" type="submit">Save Record</button>
+          <button class="btn secondary" type="button" onclick="document.getElementById('addForm').style.display='none'">Cancel</button>
+        </div>
+        <div class="form-note">New record ID will be generated automatically as <span class="mono">{{ next_id }}</span>.</div>
+      </form>
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead><tr>{% for c in cfg.columns %}<th>{{ c.label }}</th>{% endfor %}<th></th></tr></thead>
+        <tbody>
+          {% if not rows %}
+            <tr class="empty-row"><td colspan="{{ cfg.columns|length + 1 }}">No matching records.</td></tr>
+          {% else %}
+            {% for r in rows %}
+              {% set accent = row_accent(r[status_field]) if status_field else 'transparent' %}
+              <tr>
+                {% for c in cfg.columns %}
+                  <td{% if loop.first %} style="border-left-color:{{ accent }}"{% endif %}>
+                    {% if c.get('pk') %}
+                      <span class="mono">{{ r[c.key] }}</span>
+                    {% elif c.type == 'fk' %}
+                      {% set d = display_for(c.ref, r[c.key]) %}
+                      <span class="fk-chip">{{ d.main }}<span class="fid">{{ d.sub }}</span></span>
+                    {% elif c.key == status_field %}
+                      <span class="badge {{ status_color(r[c.key]) }}">{{ r[c.key] }}</span>
+                    {% elif 'Budget' in c.key or c.key == 'Unit_Cost' %}
+                      ৳{{ "{:,}".format(r[c.key]|int) }}
+                    {% else %}
+                      {{ r[c.key] }}
+                    {% endif %}
+                  </td>
+                {% endfor %}
+                <td>
+                  <button class="btn" type="button"
+                    onclick="const f=document.getElementById('editForm-{{ r[cfg.pk] }}'); f.style.display = f.style.display==='none' ? 'table-row' : 'none';">Edit</button>
+                  <a class="btn danger" href="{{ url_for('delete_record', table=table, record_id=r[cfg.pk]) }}"
+                     onclick="return confirm('Delete record {{ r[cfg.pk] }}?');">Delete</a>
+                </td>
+              </tr>
+              <tr id="editForm-{{ r[cfg.pk] }}" style="display:none;">
+                <td colspan="{{ cfg.columns|length + 1 }}">
+                  <form method="post" action="{{ url_for('edit_record', table=table, record_id=r[cfg.pk]) }}">
+                    <div class="grid">
+                      {% for c in cfg.columns %}
+                        {% if not c.get('pk') %}
+                        <div class="field">
+                          <label>{{ c.label }}</label>
+                          {% if c.type == 'select' %}
+                            <select name="{{ c.key }}">
+                              {% for o in c.options %}
+                                <option value="{{ o }}" {{ 'selected' if r[c.key] == o else '' }}>{{ o }}</option>
+                              {% endfor %}
+                            </select>
+                          {% elif c.type == 'fk' %}
+                            <select name="{{ c.key }}">
+                              {% set ref_cfg = SCHEMA[c.ref] %}
+                              {% for ref_r in ref_rows(c.ref) %}
+                                {% set d = display_for(c.ref, ref_r[ref_cfg.pk]) %}
+                                <option value="{{ ref_r[ref_cfg.pk] }}" {{ 'selected' if r[c.key] == ref_r[ref_cfg.pk] else '' }}>{{ ref_r[ref_cfg.pk] }} — {{ d.main }}</option>
+                              {% endfor %}
+                            </select>
+                          {% else %}
+                            <input type="{{ 'number' if c.type == 'number' else ('date' if c.type == 'date' else 'text') }}" name="{{ c.key }}" value="{{ r[c.key] }}">
+                          {% endif %}
+                        </div>
+                        {% endif %}
+                      {% endfor %}
+                    </div>
+                    <div class="form-actions">
+                      <button class="btn" type="submit">Update Record</button>
+                      <button class="btn secondary" type="button" onclick="document.getElementById('editForm-{{ r[cfg.pk] }}').style.display='none'">Cancel</button>
+                    </div>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
