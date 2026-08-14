@@ -1,6 +1,24 @@
+import os
+import subprocess
+
 import mysql.connector
 from mysql.connector import Error
 
+
+MYSQL_HOST = "localhost"
+MYSQL_PORT = 3306
+MYSQL_USER = "root"
+MYSQL_PASSWORD = ""
+MYSQL_DB = "DisasterManagementDB"
+
+# Path to the mysql command-line client, used only by reset_database() below
+# (needed because schema.sql's triggers use DELIMITER blocks that the Python
+# connector can't execute). If "mysql" isn't on your PATH, set the MYSQL_CLI
+# environment variable to the full path, e.g. on Windows/XAMPP:
+#   C:\xampp\mysql\bin\mysql.exe
+MYSQL_CLI = os.environ.get("MYSQL_CLI", "mysql")
+
+SCHEMA_SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "schema.sql")
 
 ROLE_TABLES = {
     "admin":        ("admin", "Admin_ID", "Admin_Password", "Admin_Name"),
@@ -13,11 +31,11 @@ ROLE_TABLES = {
 def get_db_connection():
     try:
         conn = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="",
-            database="DisasterManagementDB",
-            port=3306
+            host=MYSQL_HOST,
+            user=MYSQL_USER,
+            password=MYSQL_PASSWORD,
+            database=MYSQL_DB,
+            port=MYSQL_PORT
         )
         return conn
     except Error as e:
@@ -104,3 +122,48 @@ def verify_login(role, user_id, password):
     if row and str(row.get(pw_col)) == password:
         return {"id": user_id, "name": row.get(name_col) or user_id}
     return None
+
+
+def reset_database():
+    """Drop and rebuild MYSQL_DB from schema.sql (tables, seed data, triggers).
+
+    Returns (True, None) on success, or (False, error_message) on failure.
+    """
+    # 1) Drop and recreate an empty database (fast, no CLI needed for this part).
+    try:
+        conn = mysql.connector.connect(
+            host=MYSQL_HOST, user=MYSQL_USER, password=MYSQL_PASSWORD, port=MYSQL_PORT
+        )
+        cursor = conn.cursor()
+        cursor.execute(f"DROP DATABASE IF EXISTS {MYSQL_DB}")
+        cursor.execute(f"CREATE DATABASE {MYSQL_DB}")
+        cursor.close()
+        conn.close()
+    except Error as e:
+        return False, f"Could not drop/recreate database: {e}"
+
+    # 2) Re-import schema.sql via the mysql CLI, since it (unlike the Python
+    #    connector) understands the DELIMITER blocks used by the triggers.
+    if not os.path.exists(SCHEMA_SQL_PATH):
+        return False, f"schema.sql not found at {SCHEMA_SQL_PATH}"
+
+    cmd = [MYSQL_CLI, "-h", MYSQL_HOST, "-P", str(MYSQL_PORT), "-u", MYSQL_USER]
+    if MYSQL_PASSWORD:
+        cmd.append(f"-p{MYSQL_PASSWORD}")
+    cmd.append(MYSQL_DB)
+
+    try:
+        with open(SCHEMA_SQL_PATH, "rb") as f:
+            result = subprocess.run(cmd, stdin=f, capture_output=True, timeout=60)
+        if result.returncode != 0:
+            return False, result.stderr.decode(errors="replace")
+    except FileNotFoundError:
+        return False, (
+            f"Could not find the '{MYSQL_CLI}' command-line client. "
+            "Set the MYSQL_CLI environment variable to its full path "
+            "(e.g. C:\\xampp\\mysql\\bin\\mysql.exe on Windows)."
+        )
+    except Exception as e:
+        return False, str(e)
+
+    return True, None
