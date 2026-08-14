@@ -1,9 +1,18 @@
 import os
+import secrets
+import string
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from functools import wraps
 
 import db
 from schema import SCHEMA, NAV_GROUPS, find_status_field, status_color, row_accent
+
+
+def generate_password(length=8):
+    """Random alphanumeric password used when an admin adds a login-capable
+    record (volunteer/victim/organization) without typing one in."""
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # random each run -> forces re-login after restart
@@ -230,6 +239,7 @@ def add_record(table):
     new_id = db.next_id(table, cfg["pk"], cfg["prefix"])
     columns = [cfg["pk"]]
     values = [new_id]
+    generated_password = None
 
     for c in cfg["columns"]:
         if c.get("pk"):
@@ -237,12 +247,26 @@ def add_record(table):
         val = request.form.get(c["key"], "")
         if c.get("type") == "number":
             val = int(val) if str(val).strip() != "" else 0
+        elif c.get("type") == "password" and str(val).strip() == "":
+            # Safety net only: if the admin leaves the password field blank,
+            # generate one rather than inserting an empty/NOT-NULL-violating
+            # value. Normally the admin types the password themselves.
+            val = generate_password()
+            generated_password = val
         columns.append(c["key"])
         values.append(val)
 
     try:
         db.insert_record(table, columns, values)
-        flash(f"Record {new_id} added successfully.", "ok")
+        if generated_password:
+            flash(
+                f"Record {new_id} added successfully. "
+                f"Auto-generated password: {generated_password} "
+                f"(share this with them — it won't be shown again).",
+                "ok",
+            )
+        else:
+            flash(f"Record {new_id} added successfully.", "ok")
     except Exception as e:
         flash(f"Could not add record: {e}", "err")
 
@@ -264,6 +288,10 @@ def edit_record(table, record_id):
         val = request.form.get(c["key"], "")
         if c.get("type") == "number":
             val = int(val) if str(val).strip() != "" else 0
+        elif c.get("type") == "password" and str(val).strip() == "":
+            # Leave the existing password untouched if the edit form
+            # doesn't supply a new one.
+            continue
         columns.append(c["key"])
         values.append(val)
 
@@ -286,16 +314,27 @@ def delete_record(table, record_id):
         db.delete_record(table, cfg["pk"], record_id)
         flash(f"Record {record_id} deleted.", "ok")
     except Exception:
-        flash("Could not delete \u2014 other records still reference it.", "err")
+        flash("Could not delete — other records still reference it.", "err")
     return redirect(url_for("table_view", table=table))
 
 
-# @app.route("/reset")
-# def reset():
-#     """Wipe the local SQLite file and reseed it from schema.sql."""
-#     db.init_db(force=True)
-#     flash("Database reset to the original sample data.", "ok")
-#     return redirect(url_for("overview"))
+@app.route("/reset", methods=["POST"])
+@login_required
+def reset():
+    """Admin-only: drop and rebuild the MySQL database from schema.sql,
+    wiping all local edits and restoring the original seed data."""
+    if session.get("role") != "admin":
+        flash("Only admins can reset the database.", "err")
+        return redirect(url_for("overview"))
+
+    ok, error = db.reset_database()
+    if ok:
+        session.clear()
+        flash("Database reset — all local changes wiped and schema.sql reloaded. Please log in again.", "ok")
+        return redirect(url_for("login"))
+    else:
+        flash(f"Reset failed: {error}", "err")
+        return redirect(url_for("overview"))
 
 if __name__ == "__main__":
     app.run(debug=True)
