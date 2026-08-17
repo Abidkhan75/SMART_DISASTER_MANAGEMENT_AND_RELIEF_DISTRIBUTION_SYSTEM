@@ -135,4 +135,70 @@
     </div>
   </div>
 </div>
+
+{% if table == 'RELIEF_DISTRIBUTION' %}
+<script>
+(function() {
+  // Victim_ID -> Zone_ID, so picking a victim auto-fills their zone.
+  const VICTIM_ZONE_MAP = {{ victim_zone_map | tojson }};
+  // Organization_ID -> [Resource_ID, ...] the org actually has in stock (qty > 0).
+  const ORG_RESOURCE_MAP = {{ org_resource_map | tojson }};
+  // Full resource list, used to rebuild the filtered <option> list with labels.
+  const ALL_RESOURCES = {{ all_resources | tojson }};
+
+  function wireReliefForm(form) {
+    const victimSelect = form.querySelector('select[name="Victim_ID"]');
+    const zoneSelect = form.querySelector('select[name="Zone_ID"]');
+    const orgSelect = form.querySelector('select[name="Organization_ID"]');
+    const resourceSelect = form.querySelector('select[name="Resource_ID"]');
+
+    function syncZoneFromVictim() {
+      if (!victimSelect || !zoneSelect) return;
+      const zoneId = VICTIM_ZONE_MAP[victimSelect.value];
+      if (zoneId) zoneSelect.value = zoneId;
+    }
+
+    function syncResourcesFromOrg() {
+      if (!orgSelect || !resourceSelect) return;
+      const allowed = ORG_RESOURCE_MAP[orgSelect.value] || [];
+      const currentVal = resourceSelect.value;
+
+      resourceSelect.innerHTML = '';
+      const available = ALL_RESOURCES.filter(r => allowed.includes(r.id));
+
+      if (available.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No resources in stock for this organization';
+        resourceSelect.appendChild(opt);
+        return;
+      }
+
+      available.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.id;
+        opt.textContent = r.id + ' — ' + r.label;
+        if (r.id === currentVal) opt.selected = true;
+        resourceSelect.appendChild(opt);
+      });
+    }
+
+    if (victimSelect) {
+      victimSelect.addEventListener('change', syncZoneFromVictim);
+      syncZoneFromVictim(); // apply on load too, so it matches whatever victim is pre-selected
+    }
+    if (orgSelect) {
+      orgSelect.addEventListener('change', syncResourcesFromOrg);
+      syncResourcesFromOrg(); // filter immediately based on the currently selected org
+    }
+  }
+
+  document.querySelectorAll('form').forEach(f => {
+    if (f.querySelector('select[name="Victim_ID"]') || f.querySelector('select[name="Organization_ID"]')) {
+      wireReliefForm(f);
+    }
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}
