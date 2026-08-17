@@ -11,10 +11,13 @@
         <form method="get" style="display:flex; gap:8px;">
           <input class="search" type="text" name="q" placeholder="Search {{ cfg.label.lower() }}..." value="{{ q }}">
         </form>
+        {% if can(table, 'add') %}
         <button class="btn" onclick="const f=document.getElementById('addForm'); f.style.display = f.style.display==='none' ? 'block' : 'none';">+ Add {{ cfg.label.rstrip('s') }}</button>
+        {% endif %}
       </div>
     </div>
 
+    {% if can(table, 'add') %}
     <div class="add-form" id="addForm" style="display:none;">
       <form method="post" action="{{ url_for('add_record', table=table) }}">
         <div class="grid">
@@ -48,6 +51,7 @@
         <div class="form-note">New record ID will be generated automatically as <span class="mono">{{ next_id }}</span>.</div>
       </form>
     </div>
+    {% endif %}
 
     <div class="table-scroll">
       <table>
@@ -76,12 +80,17 @@
                   </td>
                 {% endfor %}
                 <td>
+                  {% if can(table, 'edit') %}
                   <button class="btn" type="button"
                     onclick="const f=document.getElementById('editForm-{{ r[cfg.pk] }}'); f.style.display = f.style.display==='none' ? 'table-row' : 'none';">Edit</button>
+                  {% endif %}
+                  {% if can(table, 'delete') %}
                   <a class="btn danger" href="{{ url_for('delete_record', table=table, record_id=r[cfg.pk]) }}"
                      onclick="return confirm('Delete record {{ r[cfg.pk] }}?');">Delete</a>
+                  {% endif %}
                 </td>
               </tr>
+              {% if can(table, 'edit') %}
               <tr id="editForm-{{ r[cfg.pk] }}" style="display:none;">
                 <td colspan="{{ cfg.columns|length + 1 }}">
                   <form method="post" action="{{ url_for('edit_record', table=table, record_id=r[cfg.pk]) }}">
@@ -118,6 +127,7 @@
                   </form>
                 </td>
               </tr>
+              {% endif %}
             {% endfor %}
           {% endif %}
         </tbody>
