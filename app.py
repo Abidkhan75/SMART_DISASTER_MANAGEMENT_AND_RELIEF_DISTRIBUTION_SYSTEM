@@ -159,22 +159,12 @@ def analytics():
             counts[key] = counts.get(key, 0) + 1
         return counts
 
-    # --- Pie: Zones by Risk Level ---
     risk_counts = count_by(zones, "Risk_Level")
-
-    # --- Pie: Victims by Medical Status ---
     medical_counts = count_by(victims, "Medical_Status")
-
-    # --- Donut: Volunteer Availability ---
     availability_counts = count_by(volunteers, "Availability")
-
-    # --- Bar: Disaster Status ---
     disaster_status_counts = count_by(disasters, "Status")
-
-    # --- Bar: Relief Distribution Status ---
     relief_status_counts = count_by(distributions, "Dis_Status")
 
-    # --- Bar: Shelter Occupancy vs Capacity per zone ---
     zone_name = {z["Zone_ID"]: z["City"] for z in zones}
     shelter_labels, shelter_occ, shelter_cap = [], [], []
     for s in shelters:
@@ -182,7 +172,6 @@ def analytics():
         shelter_occ.append(s["Current_Occupancy"])
         shelter_cap.append(s["Capacity"])
 
-    # --- Bar: Resource quantity distributed by category ---
     resource_category = {r["Resource_ID"]: r["Category"] for r in resources}
     category_totals = {}
     for d in distributions:
@@ -262,12 +251,45 @@ def table_view(table):
 
     status_field = find_status_field(cfg["columns"])
 
+    # ------------------------------------------------------------------
+    # Extra lookup data used only by the Relief Distribution add/edit
+    # forms (table.html), to auto-sync Zone from the selected Victim and
+    # to restrict the Resource options to what the selected Organization
+    # actually has in stock.
+    # ------------------------------------------------------------------
+    victim_zone_map = {}
+    org_resource_map = {}
+    all_resources = []
+    if table == "RELIEF_DISTRIBUTION":
+        victim_zone_map = {
+            v["Victim_ID"]: v["Zone_ID"] for v in db.fetch_all("VICTIM")
+        }
+
+        org_resource_map = {}
+        for inv in db.fetch_all("INVENTORY"):
+            qty = inv.get("Quantity") or 0
+            if qty <= 0:
+                continue
+            org_id = inv["Organization_ID"]
+            res_id = inv["Resource_ID"]
+            org_resource_map.setdefault(org_id, [])
+            if res_id not in org_resource_map[org_id]:
+                org_resource_map[org_id].append(res_id)
+
+        all_resources = [
+            {"id": r["Resource_ID"], "label": r["Resource_Name"]}
+            for r in db.fetch_all("RESOURCE")
+        ]
+
     return render_template(
         "table.html",
         active_view=table, page_title=cfg["label"], page_desc=cfg["desc"],
         table=table, cfg=cfg, rows=rows, q=q,
         status_field=status_field, total_count=len(db.fetch_all(table)),
         next_id=db.next_id(table, cfg["pk"], cfg["prefix"]),
+        victim_zone_map=victim_zone_map,
+        org_resource_map=org_resource_map,
+        all_resources=all_resources,
     )
 
 
