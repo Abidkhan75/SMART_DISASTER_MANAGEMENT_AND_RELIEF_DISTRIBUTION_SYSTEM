@@ -21,6 +21,33 @@ app.secret_key = os.urandom(24)  # random each run -> forces re-login after rest
 # Routes that are allowed WITHOUT being logged in.
 PUBLIC_ENDPOINTS = {"login", "static"}
 
+# ---------------------------------------------------------------------------
+# Role -> table -> allowed actions ("add" / "edit" / "delete").
+# Admin is handled separately (always allowed). Any role/table pair not
+# listed here has no permission - i.e. view-only for that table.
+#   - victim:        no CRUD anywhere, view only
+#   - organization:  can only ADD inventory and volunteer records
+#   - volunteer:     can only ADD relief distribution records
+# ---------------------------------------------------------------------------
+PERMISSIONS = {
+    "organization": {
+        "INVENTORY": {"add"},
+        "VOLUNTEER": {"add"},
+    },
+    "volunteer": {
+        "RELIEF_DISTRIBUTION": {"add"},
+    },
+    "victim": {},
+}
+
+
+def can(table, action):
+    """True if the logged-in role may perform `action` ('add'/'edit'/'delete') on `table`."""
+    role = session.get("role")
+    if role == "admin":
+        return True
+    return action in PERMISSIONS.get(role, {}).get(table, set())
+
 
 @app.before_request
 def require_login():
@@ -39,6 +66,20 @@ def login_required(f):
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return wrapper
+
+
+def permission_required(action):
+    """Blocks add/edit/delete routes unless can(table, action) is True.
+    Assumes the view function is called with a `table` kwarg."""
+    def decorator(f):
+        @wraps(f)
+        def wrapper(table, *args, **kwargs):
+            if not can(table, action):
+                flash("You don't have permission to do that.", "err")
+                return redirect(url_for("table_view", table=table))
+            return f(table, *args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def display_for(table, record_id):
@@ -62,6 +103,7 @@ app.jinja_env.globals.update(
     NAV_GROUPS=NAV_GROUPS,
     table_count=lambda t: len(db.fetch_all(t)),
     ref_rows=lambda t: db.fetch_all(t),
+    can=can,
 )
 
 
@@ -231,6 +273,7 @@ def table_view(table):
 
 @app.route("/table/<table>/add", methods=["POST"])
 @login_required
+@permission_required("add")
 def add_record(table):
     if table not in SCHEMA:
         return "Unknown table", 404
@@ -275,6 +318,7 @@ def add_record(table):
 
 @app.route("/table/<table>/edit/<record_id>", methods=["POST"])
 @login_required
+@permission_required("edit")
 def edit_record(table, record_id):
     if table not in SCHEMA:
         return "Unknown table", 404
@@ -306,6 +350,7 @@ def edit_record(table, record_id):
 
 @app.route("/table/<table>/delete/<record_id>")
 @login_required
+@permission_required("delete")
 def delete_record(table, record_id):
     if table not in SCHEMA:
         return "Unknown table", 404
